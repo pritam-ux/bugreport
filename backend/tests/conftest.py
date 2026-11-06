@@ -23,10 +23,9 @@ from scripts.train import train
 
 
 @pytest.fixture(scope="session")
-def client(tmp_path_factory):
+def client():
     settings = get_settings()
     assert settings.mongodb_db == "bugsense_ai_test"
-    settings.upload_dir = tmp_path_factory.mktemp("uploads")
     try:
         get_database().command("ping")
     except PyMongoError as exc:

@@ -1,0 +1,539 @@
+{
+  "trained_at": "2026-11-06T06:57:31.625776+00:00",
+  "dataset": {
+    "file": "seed_bugs.psv",
+    "reports": 196,
+    "duplicate_groups": 35,
+    "synthetic": true
+  },
+  "embedding_model": "all-MiniLM-L6-v2",
+  "classifiers": {
+    "component": {
+      "accuracy": 0.75,
+      "macro_f1": 0.749,
+      "classes": [
+        "Authentication",
+        "API",
+        "Backend",
+        "Database",
+        "Frontend",
+        "Infrastructure",
+        "UI"
+      ],
+      "per_class": [
+        {
+          "label": "Authentication",
+          "precision": 0.88,
+          "recall": 0.846,
+          "f1": 0.863,
+          "support": 26
+        },
+        {
+          "label": "API",
+          "precision": 0.76,
+          "recall": 0.704,
+          "f1": 0.731,
+          "support": 27
+        },
+        {
+          "label": "Backend",
+          "precision": 0.63,
+          "recall": 0.607,
+          "f1": 0.618,
+          "support": 28
+        },
+        {
+          "label": "Database",
+          "precision": 0.643,
+          "recall": 0.692,
+          "f1": 0.667,
+          "support": 26
+        },
+        {
+          "label": "Frontend",
+          "precision": 0.786,
+          "recall": 0.786,
+          "f1": 0.786,
+          "support": 28
+        },
+        {
+          "label": "Infrastructure",
+          "precision": 0.742,
+          "recall": 0.767,
+          "f1": 0.754,
+          "support": 30
+        },
+        {
+          "label": "UI",
+          "precision": 0.812,
+          "recall": 0.839,
+          "f1": 0.825,
+          "support": 31
+        }
+      ],
+      "confusion_matrix": [
+        [
+          22,
+          2,
+          0,
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          2,
+          19,
+          0,
+          4,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          1,
+          17,
+          4,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          2,
+          3,
+          18,
+          0,
+          2,
+          1
+        ],
+        [
+          0,
+          0,
+          2,
+          1,
+          22,
+          0,
+          3
+        ],
+        [
+          1,
+          1,
+          3,
+          1,
+          1,
+          23,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          0,
+          3,
+          0,
+          26
+        ]
+      ],
+      "selected_features": "bert",
+      "feature_comparison": {
+        "tfidf": {
+          "accuracy": 0.633,
+          "macro_f1": 0.631
+        },
+        "bert": {
+          "accuracy": 0.75,
+          "macro_f1": 0.749
+        },
+        "combined": {
+          "accuracy": 0.745,
+          "macro_f1": 0.743
+        }
+      },
+      "baseline_accuracy": 0.158,
+      "samples": 196
+    },
+    "priority": {
+      "accuracy": 0.459,
+      "macro_f1": 0.43,
+      "classes": [
+        "Critical",
+        "High",
+        "Medium",
+        "Low"
+      ],
+      "per_class": [
+        {
+          "label": "Critical",
+          "precision": 0.312,
+          "recall": 0.278,
+          "f1": 0.294,
+          "support": 18
+        },
+        {
+          "label": "High",
+          "precision": 0.453,
+          "recall": 0.523,
+          "f1": 0.486,
+          "support": 65
+        },
+        {
+          "label": "Medium",
+          "precision": 0.54,
+          "recall": 0.405,
+          "f1": 0.463,
+          "support": 84
+        },
+        {
+          "label": "Low",
+          "precision": 0.405,
+          "recall": 0.586,
+          "f1": 0.479,
+          "support": 29
+        }
+      ],
+      "confusion_matrix": [
+        [
+          5,
+          11,
+          1,
+          1
+        ],
+        [
+          5,
+          34,
+          21,
+          5
+        ],
+        [
+          6,
+          25,
+          34,
+          19
+        ],
+        [
+          0,
+          5,
+          7,
+          17
+        ]
+      ],
+      "selected_features": "bert",
+      "feature_comparison": {
+        "tfidf": {
+          "accuracy": 0.495,
+          "macro_f1": 0.4
+        },
+        "bert": {
+          "accuracy": 0.459,
+          "macro_f1": 0.43
+        },
+        "combined": {
+          "accuracy": 0.485,
+          "macro_f1": 0.43
+        }
+      },
+      "baseline_accuracy": 0.429,
+      "samples": 196
+    },
+    "severity": {
+      "accuracy": 0.546,
+      "macro_f1": 0.466,
+      "classes": [
+        "Critical",
+        "Major",
+        "Minor",
+        "Trivial"
+      ],
+      "per_class": [
+        {
+          "label": "Critical",
+          "precision": 0.429,
+          "recall": 0.286,
+          "f1": 0.343,
+          "support": 21
+        },
+        {
+          "label": "Major",
+          "precision": 0.596,
+          "recall": 0.609,
+          "f1": 0.602,
+          "support": 87
+        },
+        {
+          "label": "Minor",
+          "precision": 0.524,
+          "recall": 0.587,
+          "f1": 0.553,
+          "support": 75
+        },
+        {
+          "label": "Trivial",
+          "precision": 0.444,
+          "recall": 0.308,
+          "f1": 0.364,
+          "support": 13
+        }
+      ],
+      "confusion_matrix": [
+        [
+          6,
+          10,
+          3,
+          2
+        ],
+        [
+          5,
+          53,
+          29,
+          0
+        ],
+        [
+          3,
+          25,
+          44,
+          3
+        ],
+        [
+          0,
+          1,
+          8,
+          4
+        ]
+      ],
+      "selected_features": "combined",
+      "feature_comparison": {
+        "tfidf": {
+          "accuracy": 0.5,
+          "macro_f1": 0.351
+        },
+        "bert": {
+          "accuracy": 0.495,
+          "macro_f1": 0.396
+        },
+        "combined": {
+          "accuracy": 0.546,
+          "macro_f1": 0.466
+        }
+      },
+      "baseline_accuracy": 0.444,
+      "samples": 196
+    }
+  },
+  "duplicates": {
+    "tfidf": {
+      "queries": 70,
+      "recall_at_1": 0.829,
+      "recall_at_3": 0.986,
+      "recall_at_5": 1.0,
+      "mrr": 0.91,
+      "precision": 0.661,
+      "recall": 0.557,
+      "f1": 0.605,
+      "threshold": 0.15,
+      "curve": [
+        {
+          "threshold": 0.1,
+          "precision": 0.397,
+          "recall": 0.771
+        },
+        {
+          "threshold": 0.15,
+          "precision": 0.661,
+          "recall": 0.557
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.714,
+          "recall": 0.143
+        },
+        {
+          "threshold": 0.25,
+          "precision": 1.0,
+          "recall": 0.029
+        },
+        {
+          "threshold": 0.3,
+          "precision": 1.0,
+          "recall": 0.029
+        },
+        {
+          "threshold": 0.35,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.4,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.45,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.5,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.55,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.6,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.65,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.7,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.75,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.8,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.85,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.9,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.95,
+          "precision": 1.0,
+          "recall": 0.0
+        }
+      ]
+    },
+    "bert": {
+      "queries": 70,
+      "recall_at_1": 0.943,
+      "recall_at_3": 0.986,
+      "recall_at_5": 0.986,
+      "mrr": 0.967,
+      "precision": 0.775,
+      "recall": 0.786,
+      "f1": 0.78,
+      "threshold": 0.58,
+      "curve": [
+        {
+          "threshold": 0.1,
+          "precision": 0.337,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.15,
+          "precision": 0.337,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.2,
+          "precision": 0.337,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.25,
+          "precision": 0.337,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.3,
+          "precision": 0.34,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.35,
+          "precision": 0.359,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.4,
+          "precision": 0.431,
+          "recall": 0.943
+        },
+        {
+          "threshold": 0.45,
+          "precision": 0.561,
+          "recall": 0.914
+        },
+        {
+          "threshold": 0.5,
+          "precision": 0.703,
+          "recall": 0.914
+        },
+        {
+          "threshold": 0.55,
+          "precision": 0.8,
+          "recall": 0.8
+        },
+        {
+          "threshold": 0.6,
+          "precision": 0.906,
+          "recall": 0.686
+        },
+        {
+          "threshold": 0.65,
+          "precision": 0.923,
+          "recall": 0.514
+        },
+        {
+          "threshold": 0.7,
+          "precision": 0.957,
+          "recall": 0.314
+        },
+        {
+          "threshold": 0.75,
+          "precision": 1.0,
+          "recall": 0.114
+        },
+        {
+          "threshold": 0.8,
+          "precision": 1.0,
+          "recall": 0.057
+        },
+        {
+          "threshold": 0.85,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.9,
+          "precision": 1.0,
+          "recall": 0.0
+        },
+        {
+          "threshold": 0.95,
+          "precision": 1.0,
+          "recall": 0.0
+        }
+      ]
+    }
+  },
+  "calibrator": {
+    "pairs": 1015,
+    "positive_pairs": 35,
+    "precision": 0.789,
+    "recall": 0.429,
+    "note": "Pair-level scores at probability 0.5, including each report's five hardest non-duplicates."
+  }
+}

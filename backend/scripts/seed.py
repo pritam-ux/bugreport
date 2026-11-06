@@ -9,14 +9,14 @@ are flagged so live analytics never count them as human decisions.
 from __future__ import annotations
 
 import argparse
+import os
 import random
-import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.config import get_settings
-from app.database import BUGS, COUNTERS, DEVELOPERS, MATCHES, USERS, ensure_indexes, get_database
+from app.database import ATTACHMENTS, BUGS, COUNTERS, DEVELOPERS, MATCHES, USERS, ensure_indexes, get_database
 from app.schemas import PRIORITY_RANK
 from app.security import hash_password
 from app.services import duplicates as duplicate_service
@@ -70,9 +70,9 @@ def seed(reset: bool) -> None:
     if not (Path(settings.artifacts_dir) / MODEL_FILE).exists():
         sys.exit("Models are not trained. Run first: python -m scripts.train")
 
-    for name in (USERS, BUGS, DEVELOPERS, MATCHES, COUNTERS):
+    # The attachment bucket goes too, because its files belonged to the dropped reports.
+    for name in (USERS, BUGS, DEVELOPERS, MATCHES, COUNTERS, f"{ATTACHMENTS}.files", f"{ATTACHMENTS}.chunks"):
         db[name].drop()
-    shutil.rmtree(settings.upload_dir, ignore_errors=True)  # attachments belonged to the dropped reports
     ensure_indexes(db)
 
     rng = random.Random(20260)
@@ -84,7 +84,9 @@ def seed(reset: bool) -> None:
         {"_id": "USR", "value": 1000 + len(USERS_SEED)},
         {"_id": "DEV", "value": 100 + len(DEVELOPERS_SEED)},
     ])
-    password_hash = hash_password(DEMO_PASSWORD)
+    # Use your own password on any site other people can reach: the default is public.
+    seed_password = os.environ.get("SEED_PASSWORD") or DEMO_PASSWORD
+    password_hash = hash_password(seed_password)
     db[USERS].insert_many([
         {"user_id": f"USR-{1001 + i}", "name": name, "email": email, "role": role,
          "password_hash": password_hash, "token_version": 0, "created_at": now - timedelta(days=HISTORY_DAYS)}
@@ -235,7 +237,8 @@ def seed(reset: bool) -> None:
 
     print(f"Loaded {total} reports, {len(DEVELOPERS_SEED)} developers, {len(USERS_SEED)} users. "
           f"{profiles_ready} reports await triage.")
-    print(f"Sign in with admin@bugsense.dev, developer@bugsense.dev or reporter@bugsense.dev. Password: {DEMO_PASSWORD}")
+    shown = "the SEED_PASSWORD you set" if seed_password != DEMO_PASSWORD else DEMO_PASSWORD
+    print(f"Sign in with admin@bugsense.dev, developer@bugsense.dev or reporter@bugsense.dev. Password: {shown}")
 
 
 def _keep_listed_report_first(records: list[dict], listed: list[dict]) -> None:

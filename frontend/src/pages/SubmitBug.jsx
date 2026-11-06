@@ -11,7 +11,7 @@ const EMPTY = {
   title: '', description: '', steps_to_reproduce: '', expected_behavior: '', actual_behavior: '',
   stack_trace: '', component: '', severity: '', os: '', browser: '', app_version: '',
 }
-const MAX_FILE_MB = 10
+const MAX_FILE_MB = 4
 const ACCEPT = '.png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log'
 
 function PipelineTrace({ processing }) {

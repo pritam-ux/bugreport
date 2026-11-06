@@ -1,7 +1,5 @@
 backend/.env
 backend/.venv/
-backend/artifacts/
-backend/uploads/
 __pycache__/
 *.pyc
 .pytest_cache/

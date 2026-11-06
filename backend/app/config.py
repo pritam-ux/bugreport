@@ -22,10 +22,10 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:5180,http://127.0.0.1:5180"
 
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_model: str = "all-MiniLM-L6-v2"  # a folder in backend/models
     artifacts_dir: Path = BACKEND_DIR / "artifacts"
-    upload_dir: Path = BACKEND_DIR / "uploads"
-    max_upload_mb: int = 10
+    # Below Vercel's 4.5 MB request limit, leaving room for multipart overhead.
+    max_upload_mb: int = 4
 
     # No mail service is configured. In development the reset link is returned
     # by the API so the flow can be used. Production never exposes it.
