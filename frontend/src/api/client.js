@@ -27,6 +27,8 @@ export class ApiError extends Error {
 }
 
 function messageFrom(body, status) {
+  // Hosting platforms can reject a large request before it reaches the API.
+  if (status === 413 && !body?.detail) return 'This file is too large. Files can be up to 4 MB.'
   const detail = body?.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {

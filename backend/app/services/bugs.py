@@ -2,18 +2,19 @@
 from __future__ import annotations
 
 import re
-import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
+from gridfs import GridFSBucket
+from gridfs.errors import NoFile
 from pymongo.database import Database
 
 from nlp.pipeline import NlpEngine
 
 from ..config import get_settings
-from ..database import BUGS, DEVELOPERS, MATCHES, next_id
+from ..database import ATTACHMENTS, BUGS, DEVELOPERS, MATCHES, next_id
 from ..schemas import PRIORITY_RANK, BugCreate, BugStatus, BugUpdate
 from . import duplicates as duplicate_service
 from . import triage as triage_service
@@ -226,7 +227,7 @@ def update_bug(db: Database, engine: NlpEngine, bug_id: str, payload: BugUpdate,
 
 
 def delete_bug(db: Database, bug_id: str) -> None:
-    get_bug_or_404(db, bug_id)
+    bug = get_bug_or_404(db, bug_id)
     now = datetime.now(timezone.utc)
     # Reports that pointed at this one have no original any more: reopen them.
     db[BUGS].update_many(
@@ -235,12 +236,16 @@ def delete_bug(db: Database, bug_id: str) -> None:
     )
     db[MATCHES].delete_many({"$or": [{"bug_id": bug_id}, {"matched_bug_id": bug_id}]})
     db[BUGS].delete_one({"bug_id": bug_id})
-    shutil.rmtree(_attachment_dir(bug_id), ignore_errors=True)
+    for attachment in bug.get("attachments", []):
+        try:
+            _attachments(db).delete(attachment["attachment_id"])
+        except NoFile:
+            pass
     sync_developer_stats(db)
 
 
-def _attachment_dir(bug_id: str) -> Path:
-    return Path(get_settings().upload_dir) / re.sub(r"[^A-Za-z0-9-]", "", bug_id)
+def _attachments(db: Database) -> GridFSBucket:
+    return GridFSBucket(db, bucket_name=ATTACHMENTS)
 
 
 def add_attachment(db: Database, bug_id: str, upload: UploadFile) -> dict:
@@ -262,12 +267,10 @@ def add_attachment(db: Database, bug_id: str, upload: UploadFile) -> dict:
     if signatures and not content.startswith(signatures):
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f"This file's contents do not match {extension}.")
 
-    # Stored under a random name, so the upload's name can never choose the path.
     attachment_id = uuid.uuid4().hex
-    folder = _attachment_dir(bug_id)
-    folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"{attachment_id}{extension}").write_bytes(content)
-
+    _attachments(db).upload_from_stream_with_id(
+        attachment_id, original_name, content, metadata={"bug_id": bug_id}
+    )
     attachment = {
         "attachment_id": attachment_id,
         "filename": original_name,
@@ -279,12 +282,13 @@ def add_attachment(db: Database, bug_id: str, upload: UploadFile) -> dict:
     return attachment
 
 
-def attachment_path(db: Database, bug_id: str, attachment_id: str) -> tuple[Path, str]:
+def read_attachment(db: Database, bug_id: str, attachment_id: str) -> tuple[bytes, str]:
+    """Return ``(content, filename)``. The id must be listed on this bug, not just exist."""
     bug = get_bug_or_404(db, bug_id)
     for attachment in bug.get("attachments", []):
         if attachment["attachment_id"] == attachment_id:
-            path = _attachment_dir(bug_id) / f"{attachment_id}{attachment['extension']}"
-            if path.exists():
-                return path, attachment["filename"]
-            break
+            try:
+                return _attachments(db).open_download_stream(attachment_id).read(), attachment["filename"]
+            except NoFile:
+                break
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Attachment not found.")

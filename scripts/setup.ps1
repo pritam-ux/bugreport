@@ -11,10 +11,9 @@ if (-not (Test-Path $python)) {
     Write-Host 'Creating the Python environment...'
     python -m venv $venv
 }
-Write-Host 'Installing Python packages (CPU-only PyTorch, about 1 GB in total)...'
+Write-Host 'Installing Python packages...'
 & $python -m pip install --quiet --upgrade pip
-& $python -m pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-& $python -m pip install --quiet -r (Join-Path $root 'backend\requirements.txt')
+& $python -m pip install --quiet -r (Join-Path $root 'backend\requirements-dev.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Installing Python packages failed.' }
 
 $envFile = Join-Path $root 'backend\.env'
@@ -34,9 +33,6 @@ Pop-Location
 & (Join-Path $PSScriptRoot 'start-mongo.ps1')
 
 Push-Location (Join-Path $root 'backend')
-Write-Host 'Training the models (the first run downloads a 90 MB embedding model)...'
-& $python -m scripts.train
-if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'Training failed.' }
 Write-Host 'Loading sample data...'
 & $python -m scripts.seed
 Pop-Location

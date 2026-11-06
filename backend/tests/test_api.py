@@ -361,6 +361,32 @@ def test_attachment_rules(client, make_bug, reporter, new_reporter):
     assert download.headers["x-content-type-options"] == "nosniff"
 
 
+def test_attachments_live_in_mongodb_and_leave_with_their_report(client, make_bug, reporter, admin):
+    db = get_database()
+    bug_id = make_bug()["bug"]["bug_id"]
+    other_id = make_bug()["bug"]["bug_id"]
+    body = b"\x89PNG\r\n\x1a\n" + b"1" * 1024
+    uploaded = client.post(
+        f"/api/bugs/{bug_id}/attachments", files={"file": ("résumé shot.png", body, "image/png")}, headers=reporter
+    ).json()
+    attachment_id = uploaded["attachment_id"]
+    assert db["attachments.files"].find_one({"_id": attachment_id})["metadata"]["bug_id"] == bug_id
+
+    # An id only works through the report it belongs to.
+    assert client.get(f"/api/bugs/{other_id}/attachments/{attachment_id}", headers=reporter).status_code == 404
+    download = client.get(f"/api/bugs/{bug_id}/attachments/{attachment_id}", headers=reporter)
+    assert download.content == body
+    assert "r%C3%A9sum%C3%A9%20shot.png" in download.headers["content-disposition"]
+
+    assert client.delete(f"/api/bugs/{bug_id}", headers=admin).status_code == 204
+    assert db["attachments.files"].find_one({"_id": attachment_id}) is None
+    assert db["attachments.chunks"].find_one({"files_id": attachment_id}) is None
+
+
+def test_default_upload_limit_fits_vercel_body_limit():
+    assert get_settings().max_upload_mb * 1024 * 1024 < 4.5 * 1000 * 1000
+
+
 def test_oversized_attachment_rejected(client, make_bug, reporter, monkeypatch):
     bug_id = make_bug()["bug"]["bug_id"]
     monkeypatch.setattr(get_settings(), "max_upload_mb", 1)

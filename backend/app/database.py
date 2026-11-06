@@ -12,6 +12,7 @@ BUGS = "bug_reports"
 DEVELOPERS = "developers"
 MATCHES = "duplicate_matches"
 COUNTERS = "counters"
+ATTACHMENTS = "attachments"  # GridFS bucket
 
 
 @lru_cache

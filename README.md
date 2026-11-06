@@ -2,20 +2,20 @@
 
 BugSense AI finds likely duplicate bug reports by meaning, predicts each report's component, priority and severity, and recommends a developer. People make the final decision every time.
 
-**Stack:** React, Vite, Tailwind CSS, Lucide and Recharts on the frontend. FastAPI, Pydantic and MongoDB on the backend. Sentence-BERT (`all-MiniLM-L6-v2`), TF-IDF and scikit-learn for the NLP.
+**Stack:** React, Vite, Tailwind CSS, Lucide and Recharts on the frontend. FastAPI, Pydantic and MongoDB on the backend. Sentence-BERT (`all-MiniLM-L6-v2`, run with ONNX Runtime), TF-IDF and scikit-learn for the NLP.
 
 ## Quick start (Windows)
 
 You need Python 3.12 and Node 20 or later. Docker and admin rights aren't needed.
 
 ```powershell
-.\scripts\setup.ps1    # installs packages, MongoDB, trains models, loads sample data
+.\scripts\setup.ps1    # installs packages and MongoDB, loads sample data
 .\scripts\dev.ps1      # starts everything
 ```
 
 Then open http://localhost:5180. API docs are at http://localhost:8100/docs.
 
-Setup downloads about 1.5 GB (PyTorch, MongoDB and the embedding model). The Python environment and database live in `%LOCALAPPDATA%\BugSenseAI`, because this project sits in OneDrive and sync locks live database files. `frontend/node_modules` does stay in the project folder, so you may want to exclude it from OneDrive sync.
+Setup downloads about 1 GB, most of it MongoDB. The trained models and embedding model are in the repo. The Python environment and database live in `%LOCALAPPDATA%\BugSenseAI`, because this project sits in OneDrive and sync locks live database files. `frontend/node_modules` does stay in the project folder, so you may want to exclude it from OneDrive sync.
 
 ### Sample accounts
 
@@ -36,10 +36,8 @@ docker compose up -d                   # MongoDB on port 27018, or set MONGODB_U
 
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env                   # then set JWT_SECRET
-python -m scripts.train
 python -m scripts.seed
 uvicorn app.main:app --port 8100
 
@@ -71,7 +69,7 @@ All model code is in [`backend/nlp`](backend/nlp), separate from the API. Routes
 
 ### If a model is unavailable
 
-- **BERT can't load** (for example, no network on the first run): duplicate search uses the TF-IDF baseline, and the app shows a warning with the reason.
+- **BERT can't load** (for example, the model files are missing): duplicate search uses the TF-IDF baseline, and the app shows a warning with the reason.
 - **Classifiers aren't trained:** reports still save, marked as having no predictions, and the app tells you to run `python -m scripts.train`.
 
 ## Measured results
@@ -82,15 +80,15 @@ All model code is in [`backend/nlp`](backend/nlp), separate from the API. Routes
 |---|---|---|
 | Recall@1 | 94.3% | 82.9% |
 | Recall@5 | 98.6% | 100% |
-| Precision | 77.1% | 66.1% |
-| Recall | 77.1% | 55.7% |
-| F1 | 77.1% | 60.5% |
+| Precision | 77.5% | 66.1% |
+| Recall | 78.6% | 55.7% |
+| F1 | 78.0% | 60.5% |
 
 | Classifier | Accuracy | Macro F1 | Always guessing the commonest label |
 |---|---|---|---|
-| Component | 75.5% | 75.3% | 15.8% |
-| Priority | 49.0% | 43.5% | 42.9% |
-| Severity | 54.6% | 44.5% | 44.4% |
+| Component | 75.0% | 74.9% | 15.8% |
+| Priority | 45.9% | 43.0% | 42.9% |
+| Severity | 54.6% | 46.6% | 44.4% |
 
 ### How far to trust these numbers
 
@@ -112,6 +110,30 @@ Restart the API afterwards. Reports that share a value in the `group` column are
 - **Computed by models:** embeddings, similarity scores, duplicate chances, predictions and recommendations.
 - **Computed from the database:** every dashboard number and developer statistic.
 - **Simulated by the seed script:** sample dates, assignments and resolution times. Seeded records are flagged, so the "Decisions from your team" analytics count real reviews only.
+
+## Deploy to Vercel
+
+`vercel.json` deploys the app as one project with two services: `backend` on `/api/*` and `frontend` on everything else. The backend fits the 500 MB Python limit at about 427 MB, because it uses ONNX Runtime instead of PyTorch. Vercel's services feature is in beta.
+
+1. Create a hosted MongoDB database, such as MongoDB Atlas, and allow connections from Vercel.
+2. Load the starting data from your computer. Choose your own password, because the default one is public:
+
+   ```powershell
+   cd backend
+   $env:MONGODB_URI = "<your connection string>"
+   $env:SEED_PASSWORD = "<a strong password>"
+   python -m scripts.seed
+   ```
+
+3. Import the repo in Vercel and set these environment variables:
+
+   | Variable | Value |
+   |---|---|
+   | `MONGODB_URI` | Your connection string |
+   | `JWT_SECRET` | A random value of at least 32 characters |
+   | `ENVIRONMENT` | `production` |
+
+Limits on Vercel: attachments are capped at 4 MB, login throttling is per instance, and password reset needs a mail provider first. The first request after a quiet period is slower while the model loads. Retraining means committing the new files in `backend/artifacts`.
 
 ## API
 
@@ -149,7 +171,7 @@ frontend/src/
 scripts/            Windows setup and run scripts
 ```
 
-MongoDB collections: `users`, `bug_reports`, `developers`, `duplicate_matches`, plus `counters` for readable IDs.
+MongoDB collections: `users`, `bug_reports`, `developers`, `duplicate_matches`, plus `counters` for readable IDs. Attachments (up to 4 MB each) are stored in MongoDB in a GridFS bucket called `attachments`, so the API needs no writable disk.
 
 ## Tests
 
@@ -166,5 +188,6 @@ cd backend
 - **Large datasets:** each search loads all candidates into memory and refits TF-IDF, which suits thousands of reports. Beyond that, use a vector index such as MongoDB Atlas Vector Search or FAISS behind `NlpEngine.find_duplicates`.
 - **Login throttling is per process.** Use a shared store such as Redis if you run several API workers.
 - **Tracker integrations aren't built.** `app/integrations` defines the connector interface. `services.bugs.create_bug` already accepts `source` and `external_id`, so imported reports can use the same pipeline.
+- **Embedding model:** `backend/models` holds the quantized ONNX build of `all-MiniLM-L6-v2` (Apache 2.0), from Hugging Face.
 - **Model retraining is manual.** Reviewer decisions are stored but not yet fed back into training.
 - **Before production:** set `ENVIRONMENT=production`, use a new `JWT_SECRET`, enable MongoDB authentication and serve over HTTPS.

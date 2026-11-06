@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import time
+from urllib.parse import quote
 
 import numpy as np
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pymongo.database import Database
 
 from nlp.pipeline import NlpEngine
@@ -103,11 +104,13 @@ def upload_attachment(
 @router.get("/{bug_id}/attachments/{attachment_id}")
 def download_attachment(
     bug_id: str, attachment_id: str, db: Database = Depends(get_db), _: dict = Depends(current_user)
-) -> FileResponse:
-    path, filename = bug_service.attachment_path(db, bug_id, attachment_id)
-    return FileResponse(
-        path,
-        filename=filename,
+) -> Response:
+    content, filename = bug_service.read_attachment(db, bug_id, attachment_id)
+    return Response(
+        content,
         media_type="application/octet-stream",
-        headers={"X-Content-Type-Options": "nosniff"},
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
