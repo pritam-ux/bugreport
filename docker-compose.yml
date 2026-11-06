@@ -1,0 +1,12 @@
+# Optional alternative to scripts/start-mongo.ps1.
+services:
+  mongodb:
+    image: mongo:8.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27018:27017"
+    volumes:
+      - bugsense-mongo:/data/db
+
+volumes:
+  bugsense-mongo:
