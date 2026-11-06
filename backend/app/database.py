@@ -7,7 +7,7 @@ from pymongo.database import Database
 
 from .config import get_settings
 
-USERS = "users"
+USERS = "users"  # no longer used; kept so seeding can clear old accounts
 BUGS = "bug_reports"
 DEVELOPERS = "developers"
 MATCHES = "duplicate_matches"
@@ -17,7 +17,7 @@ ATTACHMENTS = "attachments"  # GridFS bucket
 
 @lru_cache
 def _client() -> MongoClient:
-    return MongoClient(get_settings().mongodb_uri, serverSelectionTimeoutMS=3000, tz_aware=True)
+    return MongoClient(get_settings().mongodb_uri, serverSelectionTimeoutMS=8000, tz_aware=True)
 
 
 def get_database() -> Database:
@@ -25,8 +25,6 @@ def get_database() -> Database:
 
 
 def ensure_indexes(db: Database) -> None:
-    db[USERS].create_index("user_id", unique=True)
-    db[USERS].create_index("email", unique=True)
     db[BUGS].create_index("bug_id", unique=True)
     db[BUGS].create_index([("created_at", DESCENDING)])
     for field in ("status", "priority_rank", "component", "severity", "assigned_developer", "triage_status"):

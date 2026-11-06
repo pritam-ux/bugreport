@@ -17,17 +17,7 @@ Then open http://localhost:5180. API docs are at http://localhost:8100/docs.
 
 Setup downloads about 1 GB, most of it MongoDB. The trained models and embedding model are in the repo. The Python environment and database live in `%LOCALAPPDATA%\BugSenseAI`, because this project sits in OneDrive and sync locks live database files. `frontend/node_modules` does stay in the project folder, so you may want to exclude it from OneDrive sync.
 
-### Sample accounts
-
-All three use the password `BugSense2026!`. These are for local use only, and the seed script refuses to run when `ENVIRONMENT=production`.
-
-| Role | Email | Can do |
-|---|---|---|
-| Admin | `admin@bugsense.dev` | Everything, including approving triage, deleting reports and changing roles |
-| Developer | `developer@bugsense.dev` | Edit any report, assign developers, review duplicates |
-| Reporter | `reporter@bugsense.dev` | Submit reports, edit their own text, review duplicates on their own reports |
-
-Public sign-up always creates a Reporter.
+The app has no sign-in. Everyone who can open it has full access, including editing and deleting reports.
 
 ### macOS, Linux or manual setup
 
@@ -37,7 +27,7 @@ docker compose up -d                   # MongoDB on port 27018, or set MONGODB_U
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env                   # then set JWT_SECRET
+cp .env.example .env
 python -m scripts.seed
 uvicorn app.main:app --port 8100
 
@@ -46,7 +36,7 @@ cd ../frontend && npm install && npm run dev
 
 ## Try the main workflow
 
-1. Sign in as the admin and open **Submit a bug**.
+1. Open **Submit a bug**.
 2. Enter the title `Application crashes when I click the login button` and any description, then submit.
 3. The results page shows the five closest reports, the predictions, suggested developers and what each pipeline step produced.
 4. Select **Review duplicates**, then **System stops working after pressing the sign-in button**. The two reports share almost no wording, but the model links them. Hover a tinted sentence to see its partner.
@@ -116,12 +106,11 @@ Restart the API afterwards. Reports that share a value in the `group` column are
 `vercel.json` deploys the app as one project with two services: `backend` on `/api/*` and `frontend` on everything else. The backend fits the 500 MB Python limit at about 427 MB, because it uses ONNX Runtime instead of PyTorch. Vercel's services feature is in beta.
 
 1. Create a hosted MongoDB database, such as MongoDB Atlas, and allow connections from Vercel.
-2. Load the starting data from your computer. Choose your own password, because the default one is public:
+2. Load the sample data from your computer (optional):
 
    ```powershell
    cd backend
    $env:MONGODB_URI = "<your connection string>"
-   $env:SEED_PASSWORD = "<a strong password>"
    python -m scripts.seed
    ```
 
@@ -130,27 +119,24 @@ Restart the API afterwards. Reports that share a value in the `group` column are
    | Variable | Value |
    |---|---|
    | `MONGODB_URI` | Your connection string |
-   | `JWT_SECRET` | A random value of at least 32 characters |
    | `ENVIRONMENT` | `production` |
 
-Limits on Vercel: attachments are capped at 4 MB, login throttling is per instance, and password reset needs a mail provider first. The first request after a quiet period is slower while the model loads. Retraining means committing the new files in `backend/artifacts`.
+**The site is open to anyone with the URL.** Visitors can read, edit and delete reports and upload files, so don't store anything sensitive there. Attachments are capped at 4 MB. The first request after a quiet period is slower while the model loads. Retraining means committing the new files in `backend/artifacts`.
 
 ## API
 
-Interactive docs are at `/docs`. Everything except register, login, password reset and health needs a bearer token.
+Interactive docs are at `/docs` when running locally. No endpoint needs a token.
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/auth/register`, `/login`, `/forgot-password`, `/reset-password`, `GET /api/auth/me` |
 | Bugs | `POST` and `GET /api/bugs`, `GET`, `PUT` and `DELETE /api/bugs/{id}`, `POST /api/bugs/{id}/attachments`, `GET /api/bugs/{id}/attachments/{attachment_id}` |
 | Duplicates | `POST /api/duplicates/search`, `POST /api/duplicates/check/{id}`, `GET /api/duplicates/{id}`, `POST /api/duplicates/confirm` |
 | Triage | `POST /api/triage/predict`, `GET /api/triage/{id}`, `POST /api/triage/{id}/decision` |
 | Developers | `GET` and `POST /api/developers`, `GET /api/developers/{id}` |
 | Analytics | `GET /api/analytics/dashboard`, `/duplicates`, `/triage` |
-| Users | `GET /api/users`, `PUT /api/users/{id}/role` (Admin) |
 | System | `GET /api/health`, `GET /api/system/status` |
 
-Beyond the original specification, the app adds `/duplicates/search`, the attachment routes, the triage decision route, the password reset routes, and the user role routes.
+Beyond the original specification, the app adds `/duplicates/search`, the attachment routes and the triage decision route. The authentication routes were removed along with the sign-in pages.
 
 ## Project layout
 
@@ -171,7 +157,7 @@ frontend/src/
 scripts/            Windows setup and run scripts
 ```
 
-MongoDB collections: `users`, `bug_reports`, `developers`, `duplicate_matches`, plus `counters` for readable IDs. Attachments (up to 4 MB each) are stored in MongoDB in a GridFS bucket called `attachments`, so the API needs no writable disk.
+MongoDB collections: `bug_reports`, `developers`, `duplicate_matches`, plus `counters` for readable IDs. Attachments (up to 4 MB each) are stored in MongoDB in a GridFS bucket called `attachments`, so the API needs no writable disk.
 
 ## Tests
 
@@ -184,10 +170,9 @@ cd backend
 
 ## Known limits and next steps
 
-- **Password reset email isn't connected.** No mail service is configured, so in development the reset link appears on screen. In production the API won't return it, so connect a mail provider in `routers/auth.py` before deploying.
+- **No access control:** all visitors share one open workspace, and every action is recorded as "Team member". Add authentication back before storing anything sensitive; the earlier version is in the git history.
 - **Large datasets:** each search loads all candidates into memory and refits TF-IDF, which suits thousands of reports. Beyond that, use a vector index such as MongoDB Atlas Vector Search or FAISS behind `NlpEngine.find_duplicates`.
-- **Login throttling is per process.** Use a shared store such as Redis if you run several API workers.
 - **Tracker integrations aren't built.** `app/integrations` defines the connector interface. `services.bugs.create_bug` already accepts `source` and `external_id`, so imported reports can use the same pipeline.
 - **Embedding model:** `backend/models` holds the quantized ONNX build of `all-MiniLM-L6-v2` (Apache 2.0), from Hugging Face.
 - **Model retraining is manual.** Reviewer decisions are stored but not yet fed back into training.
-- **Before production:** set `ENVIRONMENT=production`, use a new `JWT_SECRET`, enable MongoDB authentication and serve over HTTPS.
+- **Before production:** set `ENVIRONMENT=production`, enable MongoDB authentication and serve over HTTPS.

@@ -6,7 +6,6 @@ import {
   Button, COMPONENTS, Card, Input, Modal, Notice, PRIORITIES, PriorityBadge, SEVERITIES, STATUSES, Select, SeverityBadge, Spinner,
   StatusBadge, Textarea, formatDate,
 } from '../components/ui.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
 
 function Section({ title, children, mono }) {
   if (!children) return null
@@ -163,7 +162,6 @@ function Attachments({ bug, canUpload, onUploaded }) {
 
 export default function BugDetail() {
   const { bugId } = useParams()
-  const { user } = useAuth()
   const navigate = useNavigate()
   const { data: bug, error, loading, reload, setData } = useApi(`/bugs/${bugId}`)
   const { data: developers } = useApi('/developers')
@@ -175,8 +173,6 @@ export default function BugDetail() {
   if (loading && !bug) return <Spinner label="Loading the report" />
   if (error && !bug) return <Notice tone="error" onRetry={reload}>{error}</Notice>
 
-  const isStaff = user.role !== 'Reporter'
-  const isOwner = bug.reporter_id === user.user_id
   const environment = bug.environment || {}
 
   const remove = async () => {
@@ -209,8 +205,8 @@ export default function BugDetail() {
         <div className="flex flex-wrap gap-2">
           <Link to={`/duplicates/${bug.bug_id}`}><Button variant="secondary" icon={CopyCheck}>Check duplicates</Button></Link>
           <Link to={`/triage/${bug.bug_id}`}><Button variant="secondary" icon={ClipboardCheck}>View triage</Button></Link>
-          {(isStaff || isOwner) && <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Edit</Button>}
-          {user.role === 'Admin' && <Button variant="danger" icon={Trash2} onClick={() => setConfirmDelete(true)}>Delete</Button>}
+          <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Edit</Button>
+          <Button variant="danger" icon={Trash2} onClick={() => setConfirmDelete(true)}>Delete</Button>
         </div>
       </div>
 
@@ -235,7 +231,7 @@ export default function BugDetail() {
           </Card>
         </div>
         <div className="min-w-0 space-y-4">
-          {isStaff && <ManagePanel bug={bug} developers={developers} onChange={setData} />}
+          <ManagePanel bug={bug} developers={developers} onChange={setData} />
           <Card title="Details">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
               {[
@@ -256,7 +252,7 @@ export default function BugDetail() {
               ))}
             </dl>
           </Card>
-          <Attachments bug={bug} canUpload={isStaff || isOwner} onUploaded={reload} />
+          <Attachments bug={bug} canUpload onUploaded={reload} />
         </div>
       </div>
 

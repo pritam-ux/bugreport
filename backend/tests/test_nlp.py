@@ -153,6 +153,14 @@ def test_recommender_reason_is_honest_without_history():
     assert "No Database history" in best["reason"]
 
 
+def test_corrupt_model_file_leaves_engine_usable(tmp_path: Path, engine):
+    (tmp_path / "models.joblib").write_bytes(b"this is not a model")
+    broken = NlpEngine.load(engine.status["semantic_engine"], tmp_path)
+    assert broken.status["classifiers_trained"] is False
+    assert "models.joblib" in broken.status["classifier_error"]
+    assert broken.status["semantic_available"] is True
+
+
 def test_missing_artifacts_leave_engine_usable(tmp_path: Path, engine):
     empty = NlpEngine.load(engine.status["semantic_engine"], tmp_path)
     assert empty.status["classifiers_trained"] is False

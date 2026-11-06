@@ -1,24 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-const TOKEN_KEY = 'bugsense.token'
-
-export function getToken() {
-  try {
-    return localStorage.getItem(TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-export function setToken(token) {
-  try {
-    if (token) localStorage.setItem(TOKEN_KEY, token)
-    else localStorage.removeItem(TOKEN_KEY)
-  } catch {
-    // Storage can be blocked. The session then lasts until the page reloads.
-  }
-}
-
 export class ApiError extends Error {
   constructor(message, status) {
     super(message)
@@ -29,6 +10,7 @@ export class ApiError extends Error {
 function messageFrom(body, status) {
   // Hosting platforms can reject a large request before it reaches the API.
   if (status === 413 && !body?.detail) return 'This file is too large. Files can be up to 4 MB.'
+  if (status >= 500 && !body?.detail) return `The server hit an error (${status}). Try again in a moment.`
   const detail = body?.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
@@ -50,8 +32,6 @@ async function send(path, { method = 'GET', body, params, raw = false } = {}) {
   })
   const url = `/api${path}${query.size ? `?${query}` : ''}`
   const headers = {}
-  const token = getToken()
-  if (token) headers.Authorization = `Bearer ${token}`
   const isForm = body instanceof FormData
   if (body && !isForm) headers['Content-Type'] = 'application/json'
 
@@ -63,13 +43,9 @@ async function send(path, { method = 'GET', body, params, raw = false } = {}) {
       body: isForm ? body : body ? JSON.stringify(body) : undefined,
     })
   } catch {
-    throw new ApiError('Cannot reach the server. Check that the API is running on port 8100.', 0)
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0)
   }
 
-  if (response.status === 401 && token) {
-    setToken(null)
-    window.dispatchEvent(new Event('bugsense:signed-out'))
-  }
   if (!response.ok) {
     const data = await response.json().catch(() => null)
     throw new ApiError(messageFrom(data, response.status), response.status)

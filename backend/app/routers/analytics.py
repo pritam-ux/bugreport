@@ -5,10 +5,10 @@ from pymongo.database import Database
 
 from nlp.pipeline import NlpEngine
 
-from ..deps import current_user, get_db, get_engine
+from ..deps import get_db, get_engine
 from ..services import analytics as service
 
-router = APIRouter(prefix="/api/analytics", tags=["Analytics"], dependencies=[Depends(current_user)])
+router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
 
 @router.get("/dashboard")

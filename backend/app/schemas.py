@@ -5,12 +5,6 @@ from enum import Enum
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
-class Role(str, Enum):
-    admin = "Admin"
-    developer = "Developer"
-    reporter = "Reporter"
-
-
 class Component(str, Enum):
     authentication = "Authentication"
     api = "API"
@@ -45,42 +39,6 @@ class BugStatus(str, Enum):
 
 
 PRIORITY_RANK = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
-
-
-def _password_ok(value: str) -> str:
-    if len(value.encode()) > 72:
-        raise ValueError("Password must be 72 bytes or fewer.")
-    if not any(c.isalpha() for c in value) or not any(c.isdigit() for c in value):
-        raise ValueError("Password must include a letter and a number.")
-    return value
-
-
-class RegisterRequest(BaseModel):
-    name: str = Field(min_length=2, max_length=100)
-    email: EmailStr
-    password: str = Field(min_length=10)
-
-    _check_password = field_validator("password")(_password_ok)
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=1, max_length=200)
-
-
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
-
-
-class ResetPasswordRequest(BaseModel):
-    token: str = Field(min_length=20, max_length=200)
-    password: str = Field(min_length=10)
-
-    _check_password = field_validator("password")(_password_ok)
-
-
-class RoleUpdate(BaseModel):
-    role: Role
 
 
 class Environment(BaseModel):

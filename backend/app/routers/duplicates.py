@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pymongo.database import Database
 
 from nlp.pipeline import NlpEngine
@@ -31,7 +31,6 @@ def search(
     payload: DuplicateSearch,
     db: Database = Depends(get_db),
     engine: NlpEngine = Depends(get_engine),
-    _: dict = Depends(current_user),
 ) -> dict:
     """Find similar reports for any text. Nothing is saved."""
     return service.search_text(db, engine, payload.text)
@@ -42,7 +41,6 @@ def check(
     bug_id: str,
     db: Database = Depends(get_db),
     engine: NlpEngine = Depends(get_engine),
-    _: dict = Depends(current_user),
 ) -> dict:
     """Score a saved report against current reports and store the top 5."""
     bug = bug_service.get_bug_or_404(db, bug_id)
@@ -59,9 +57,6 @@ def confirm(
     user: dict = Depends(current_user),
 ) -> dict:
     """Store a person's decision. This is the only way a report becomes a duplicate."""
-    bug = bug_service.get_bug_or_404(db, payload.bug_id)
-    if user["role"] == "Reporter" and bug.get("reporter_id") != user["user_id"]:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only review reports you submitted.")
     if payload.is_duplicate:
         if not payload.matched_bug_id:
             raise HTTPException(422, "Choose the report this one duplicates.")
@@ -76,7 +71,6 @@ def stored_matches(
     bug_id: str,
     db: Database = Depends(get_db),
     engine: NlpEngine = Depends(get_engine),
-    _: dict = Depends(current_user),
 ) -> dict:
     bug = bug_service.get_bug_or_404(db, bug_id)
     return _response(db, engine, bug, service.get_matches(db, bug_id))

@@ -7,10 +7,8 @@ pydantic[email]>=2.7,<3
 pydantic-settings>=2.3,<3
 python-multipart>=0.0.9,<1
 
-# Storage and auth
+# Storage
 pymongo>=4.8,<5
-bcrypt>=4.1,<6
-PyJWT>=2.8,<3
 
 # NLP. The committed model file in artifacts/ was saved with these exact versions.
 # Retrain it (python -m scripts.train) if you change them.

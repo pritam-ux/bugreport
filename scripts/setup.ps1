@@ -18,10 +18,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Installing Python packages failed.' }
 
 $envFile = Join-Path $root 'backend\.env'
 if (-not (Test-Path $envFile)) {
-    $secret = & $python -c "import secrets; print(secrets.token_urlsafe(48))"
-    (Get-Content (Join-Path $root 'backend\.env.example')) -replace '^JWT_SECRET=$', "JWT_SECRET=$secret" |
-        Set-Content $envFile -Encoding utf8
-    Write-Host 'Created backend\.env with a new JWT secret.'
+    Copy-Item (Join-Path $root 'backend\.env.example') $envFile
+    Write-Host 'Created backend\.env.'
 }
 
 Write-Host 'Installing frontend packages...'

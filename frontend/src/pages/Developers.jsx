@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
 import { api, useApi } from '../api/client.js'
 import { Button, COMPONENTS, Card, EmptyState, Input, Meter, Modal, Notice, PageHeader, PriorityBadge, Spinner, StatusBadge } from '../components/ui.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
 
 function AddDeveloper({ onClose, onSaved }) {
   const [form, setForm] = useState({ name: '', email: '', skills: '', assigned_components: [] })
@@ -90,7 +89,6 @@ function DeveloperDetail({ id, onClose }) {
 }
 
 export default function Developers() {
-  const { user } = useAuth()
   const { data, error, loading, reload } = useApi('/developers')
   const [adding, setAdding] = useState(false)
   const [viewing, setViewing] = useState(null)
@@ -100,7 +98,7 @@ export default function Developers() {
       <PageHeader
         title="Developers"
         description="Expertise and workload here feed the developer recommendations."
-        action={user.role === 'Admin' && <Button icon={UserPlus} onClick={() => setAdding(true)}>Add a developer</Button>}
+        action={<Button icon={UserPlus} onClick={() => setAdding(true)}>Add a developer</Button>}
       />
       {error && !data && <Notice tone="error" onRetry={reload}>{error}</Notice>}
       {loading && !data && <Spinner label="Loading developers" />}

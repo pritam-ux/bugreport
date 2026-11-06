@@ -4,14 +4,14 @@ import time
 from urllib.parse import quote
 
 import numpy as np
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import Response
 from pymongo.database import Database
 
 from nlp.pipeline import NlpEngine
 
 from ..database import BUGS
-from ..deps import current_user, get_db, get_engine, require_roles
+from ..deps import current_user, get_db, get_engine
 from ..schemas import BugCreate, BugUpdate
 from ..services import bugs as bug_service
 from ..services import duplicates as duplicate_service
@@ -60,7 +60,6 @@ def list_bugs(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Database = Depends(get_db),
-    _: dict = Depends(current_user),
 ) -> dict:
     return bug_service.list_bugs(
         db, search, priority, severity, component, status_filter, developer, triage_status, duplicate_review, sort, page, page_size
@@ -68,7 +67,7 @@ def list_bugs(
 
 
 @router.get("/{bug_id}")
-def get_bug(bug_id: str, db: Database = Depends(get_db), _: dict = Depends(current_user)) -> dict:
+def get_bug(bug_id: str, db: Database = Depends(get_db)) -> dict:
     return bug_service.public_bug(bug_service.get_bug_or_404(db, bug_id), developer_names(db))
 
 
@@ -78,13 +77,12 @@ def update_bug(
     payload: BugUpdate,
     db: Database = Depends(get_db),
     engine: NlpEngine = Depends(get_engine),
-    user: dict = Depends(current_user),
 ) -> dict:
-    return bug_service.public_bug(bug_service.update_bug(db, engine, bug_id, payload, user), developer_names(db))
+    return bug_service.public_bug(bug_service.update_bug(db, engine, bug_id, payload), developer_names(db))
 
 
 @router.delete("/{bug_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bug(bug_id: str, db: Database = Depends(get_db), _: dict = Depends(require_roles("Admin"))) -> None:
+def delete_bug(bug_id: str, db: Database = Depends(get_db)) -> None:
     bug_service.delete_bug(db, bug_id)
 
 
@@ -93,17 +91,13 @@ def upload_attachment(
     bug_id: str,
     file: UploadFile = File(...),
     db: Database = Depends(get_db),
-    user: dict = Depends(current_user),
 ) -> dict:
-    bug = bug_service.get_bug_or_404(db, bug_id)
-    if user["role"] == "Reporter" and bug.get("reporter_id") != user["user_id"]:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only add files to reports you submitted.")
     return bug_service.add_attachment(db, bug_id, file)
 
 
 @router.get("/{bug_id}/attachments/{attachment_id}")
 def download_attachment(
-    bug_id: str, attachment_id: str, db: Database = Depends(get_db), _: dict = Depends(current_user)
+    bug_id: str, attachment_id: str, db: Database = Depends(get_db)
 ) -> Response:
     content, filename = bug_service.read_attachment(db, bug_id, attachment_id)
     return Response(

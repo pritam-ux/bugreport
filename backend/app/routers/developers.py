@@ -7,7 +7,7 @@ from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
 
 from ..database import BUGS, DEVELOPERS, next_id
-from ..deps import current_user, get_db, require_roles
+from ..deps import get_db
 from ..schemas import DeveloperCreate
 from ..services.developers import list_developers, public_developer
 
@@ -15,13 +15,13 @@ router = APIRouter(prefix="/api/developers", tags=["Developers"])
 
 
 @router.get("")
-def get_developers(db: Database = Depends(get_db), _: dict = Depends(current_user)) -> list[dict]:
+def get_developers(db: Database = Depends(get_db)) -> list[dict]:
     return list_developers(db)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_developer(
-    payload: DeveloperCreate, db: Database = Depends(get_db), _: dict = Depends(require_roles("Admin"))
+    payload: DeveloperCreate, db: Database = Depends(get_db)
 ) -> dict:
     developer = {
         "developer_id": next_id(db, "DEV", start=100),
@@ -44,7 +44,7 @@ def create_developer(
 
 
 @router.get("/{developer_id}")
-def get_developer(developer_id: str, db: Database = Depends(get_db), _: dict = Depends(current_user)) -> dict:
+def get_developer(developer_id: str, db: Database = Depends(get_db)) -> dict:
     developer = db[DEVELOPERS].find_one({"developer_id": developer_id}, {"_id": 0})
     if developer is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Developer {developer_id} was not found.")

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useApi } from '../api/client.js'
 import { SimpleBars, TrendChart } from '../components/charts.jsx'
 import { Button, Card, EmptyState, Notice, PageHeader, PriorityBadge, Spinner, StatusBadge, formatDate } from '../components/ui.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
 
 function Stat({ label, value, note, to }) {
   const body = (
@@ -50,7 +49,6 @@ function RecentBugs({ bugs }) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
   const { data, error, loading, reload } = useApi('/analytics/dashboard')
   const [range, setRange] = useState('weekly')
 
@@ -71,7 +69,7 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader
-        title={`Hello, ${user.name.split(' ')[0]}`}
+        title="Dashboard"
         description={totals.pending_triage ? `${totals.pending_triage} new reports are waiting for triage.` : 'Every report has been triaged.'}
         action={<Link to="/submit"><Button>Submit a bug</Button></Link>}
       />

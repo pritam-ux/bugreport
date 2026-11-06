@@ -113,7 +113,7 @@ function Results({ result, uploadError, onAnother }) {
             )}
           </Card>
           <div className="space-y-4 xl:col-span-2">
-            <Card title="AI suggestions" description={`Pending administrator review.`}>
+            <Card title="AI suggestions" description="Waiting for review in AI triage.">
               <PredictionPanel predictions={details} />
             </Card>
           </div>

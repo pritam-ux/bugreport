@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
-  BarChart3, Bug, ClipboardCheck, CopyCheck, LayoutDashboard, LogOut, Menu, PlusCircle, ShieldCheck, Users, X,
+  BarChart3, Bug, ClipboardCheck, CopyCheck, LayoutDashboard, Menu, PlusCircle, Users, X,
 } from 'lucide-react'
 import { useApi } from '../api/client.js'
-import { useAuth } from '../context/AuthContext.jsx'
 import { Notice } from './ui.jsx'
 
 const NAV = [
@@ -15,7 +14,6 @@ const NAV = [
   { to: '/triage', label: 'AI triage', icon: ClipboardCheck },
   { to: '/developers', label: 'Developers', icon: Users },
   { to: '/analytics', label: 'AI analytics', icon: BarChart3 },
-  { to: '/users', label: 'User access', icon: ShieldCheck, roles: ['Admin'] },
 ]
 
 export const Logo = ({ light = true }) => (
@@ -46,13 +44,10 @@ function EngineWarning() {
 }
 
 export default function Layout() {
-  const { user, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
 
   useEffect(() => setMenuOpen(false), [location.pathname])
-
-  const links = NAV.filter((item) => !item.roles || item.roles.includes(user.role))
 
   return (
     <div className="min-h-full lg:pl-64">
@@ -83,7 +78,7 @@ export default function Layout() {
           </button>
         </div>
         <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto px-3">
-          {links.map(({ to, label, icon: Icon, end }) => (
+          {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -99,17 +94,6 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="border-t border-white/10 p-4">
-          <p className="truncate text-sm font-medium text-white">{user.name}</p>
-          <p className="truncate text-xs">{user.role}, {user.email}</p>
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-3 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/5 hover:text-white"
-          >
-            <LogOut size={16} aria-hidden /> Sign out
-          </button>
-        </div>
       </aside>
 
       <main className="mx-auto max-w-[1320px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

@@ -4,7 +4,6 @@ import { CheckCircle2, CopyCheck, RefreshCw, Search } from 'lucide-react'
 import { api, useApi } from '../api/client.js'
 import Comparison from '../components/Comparison.jsx'
 import { Button, Card, EmptyState, Meter, Notice, PageHeader, PriorityBadge, Spinner, StatusBadge, percent } from '../components/ui.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
 
 const STRENGTH_STYLE = {
   Strong: 'bg-critical-tint text-critical',
@@ -160,9 +159,7 @@ function ReviewBanner({ data }) {
 }
 
 function BugReview({ bugId }) {
-  const { user } = useAuth()
   const { data, error, loading, reload, setData } = useApi(`/duplicates/${bugId}`)
-  const { data: owner } = useApi(`/bugs/${bugId}`)
   const [selected, setSelected] = useState(null)
   const [busy, setBusy] = useState(null)
   const [actionError, setActionError] = useState(null)
@@ -173,7 +170,6 @@ function BugReview({ bugId }) {
   if (error && !data) return <Notice tone="error" onRetry={reload}>{error}</Notice>
 
   const match = data.matches.find((m) => m.matched_bug_id === selected) || data.matches[0]
-  const canReview = user.role !== 'Reporter' || owner?.reporter_id === user.user_id
 
   const act = async (name, request) => {
     setBusy(name)
@@ -208,7 +204,7 @@ function BugReview({ bugId }) {
             <MatchDetail
               match={match}
               leftHeading={data.bug_id}
-              actions={canReview ? (
+              actions={(
                 <>
                   <Button icon={CopyCheck} busy={busy === 'duplicate'} disabled={data.duplicate_of === match.matched_bug_id} onClick={() => confirm({ is_duplicate: true, matched_bug_id: match.matched_bug_id })}>
                     Mark as duplicate of {match.matched_bug_id}
@@ -217,7 +213,7 @@ function BugReview({ bugId }) {
                     Confirm as unique
                   </Button>
                 </>
-              ) : <p className="text-sm text-ink-muted">Only the person who submitted this report, developers and administrators can review it.</p>}
+              )}
             />
           </div>
         </div>

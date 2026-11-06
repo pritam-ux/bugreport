@@ -22,7 +22,6 @@ from .developers import developer_names, sync_developer_stats
 
 HIDDEN_FIELDS = {"_id": 0, "embedding": 0, "document": 0}
 TEXT_FIELDS = {"title", "description", "steps_to_reproduce", "expected_behavior", "actual_behavior", "stack_trace"}
-REPORTER_FIELDS = TEXT_FIELDS | {"environment"}
 ALLOWED_SORTS = {
     "date_desc": [("created_at", -1)],
     "date_asc": [("created_at", 1)],
@@ -173,21 +172,11 @@ def list_bugs(
     }
 
 
-def update_bug(db: Database, engine: NlpEngine, bug_id: str, payload: BugUpdate, user: dict) -> dict:
+def update_bug(db: Database, engine: NlpEngine, bug_id: str, payload: BugUpdate) -> dict:
     bug = get_bug_or_404(db, bug_id)
     changes = payload.model_dump(mode="json", exclude_unset=True)
     if not changes:
         return bug
-
-    if user["role"] == "Reporter":
-        if bug.get("reporter_id") != user["user_id"]:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only edit reports you submitted.")
-        blocked = set(changes) - REPORTER_FIELDS
-        if blocked:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                f"Reporters cannot change: {', '.join(sorted(blocked))}.",
-            )
 
     now = datetime.now(timezone.utc)
     new_status = changes.get("status")

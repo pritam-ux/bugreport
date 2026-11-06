@@ -3,30 +3,28 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pymongo.errors import PyMongoError
 
-from nlp.pipeline import NlpEngine
-
 from .config import get_settings
 from .database import ensure_indexes, get_database
-from .deps import current_user
-from .routers import analytics, auth, bugs, developers, duplicates, triage, users
+from .deps import get_engine, load_engine
+from .routers import analytics, bugs, developers, duplicates, triage
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    settings = get_settings()
     try:
         ensure_indexes(get_database())
     except PyMongoError as exc:
         # Keep starting: /api/health and each request then explain what is missing.
-        logger.error("MongoDB is not reachable at %s: %s", settings.mongodb_uri, exc)
-    app.state.nlp = NlpEngine.load(settings.embedding_model, settings.artifacts_dir)
+        # The URI is left out of the log because it can contain a password.
+        logger.error("MongoDB is not reachable: %s", type(exc).__name__)
+    load_engine(app)
     yield
 
 
@@ -36,17 +34,26 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Content-Type"],
 )
 
 
 @app.exception_handler(PyMongoError)
 async def database_error(_: Request, exc: PyMongoError) -> JSONResponse:
-    logger.error("Database error: %s", exc)
-    return JSONResponse(status_code=503, content={"detail": "The database is unavailable. Check that MongoDB is running."})
+    logger.error("Database error: %s", type(exc).__name__)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "The database is unavailable. Check the MONGODB_URI setting and that MongoDB is reachable."},
+    )
 
 
-for module in (auth, users, bugs, duplicates, triage, developers, analytics):
+@app.exception_handler(Exception)
+async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": "The server hit an unexpected error. Check the API logs."})
+
+
+for module in (bugs, duplicates, triage, developers, analytics):
     app.include_router(module.router)
 
 
@@ -57,10 +64,10 @@ def health(request: Request) -> dict:
         database = True
     except PyMongoError:
         database = False
-    return {"status": "ok" if database else "degraded", "database": database, "nlp": request.app.state.nlp.status}
+    return {"status": "ok" if database else "degraded", "database": database, "nlp": get_engine(request).status}
 
 
-@app.get("/api/system/status", tags=["System"], dependencies=[Depends(current_user)])
+@app.get("/api/system/status", tags=["System"])
 def system_status(request: Request) -> dict:
-    engine: NlpEngine = request.app.state.nlp
+    engine = get_engine(request)
     return {**engine.status, "trained_at": engine.metrics.get("trained_at"), "dataset": engine.metrics.get("dataset")}

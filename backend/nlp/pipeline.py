@@ -43,6 +43,7 @@ class NlpEngine:
     models: dict[str, TargetModel] = field(default_factory=dict)
     calibrator: DuplicateCalibrator | None = None
     metrics: dict = field(default_factory=dict)
+    model_error: str | None = None
 
     @classmethod
     def load(cls, model_name: str, artifacts_dir: Path) -> "NlpEngine":
@@ -50,12 +51,17 @@ class NlpEngine:
         engine = cls(encoder=encoder, encoder_error=error)
         path = Path(artifacts_dir) / MODEL_FILE
         if path.exists():
-            bundle = joblib.load(path)
-            engine.models = bundle["models"]
-            engine.calibrator = bundle["calibrator"]
-            if encoder is not None and bundle.get("encoder_name") not in (None, encoder.name):
-                logger.warning("Models were trained with %s but %s is loaded. Run scripts.train.",
-                               bundle.get("encoder_name"), encoder.name)
+            # A bad model file must not take the API down. Reports still save without predictions.
+            try:
+                bundle = joblib.load(path)
+                engine.models = bundle["models"]
+                engine.calibrator = bundle["calibrator"]
+                if encoder is not None and bundle.get("encoder_name") not in (None, encoder.name):
+                    logger.warning("Models were trained with %s but %s is loaded. Run scripts.train.",
+                                   bundle.get("encoder_name"), encoder.name)
+            except Exception as exc:
+                engine.model_error = f"Could not load {MODEL_FILE}: {exc}"
+                logger.exception(engine.model_error)
         metrics_path = Path(artifacts_dir) / METRICS_FILE
         if metrics_path.exists():
             engine.metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
@@ -69,6 +75,7 @@ class NlpEngine:
             "semantic_error": self.encoder_error,
             "classifiers_trained": bool(self.models),
             "calibrated": self.calibrator is not None,
+            "classifier_error": self.model_error,
         }
 
     def embed_document(self, document: str) -> np.ndarray | None:

@@ -5,7 +5,7 @@ from pymongo.database import Database
 
 from nlp.pipeline import NlpEngine
 
-from ..deps import current_user, get_db, get_engine, require_roles
+from ..deps import current_user, get_db, get_engine
 from ..schemas import BugCreate, TriageDecision
 from ..services import bugs as bug_service
 from ..services import triage as service
@@ -19,7 +19,6 @@ def predict(
     payload: BugCreate,
     db: Database = Depends(get_db),
     engine: NlpEngine = Depends(get_engine),
-    _: dict = Depends(current_user),
 ) -> dict:
     """Predict without saving. Useful for previews and external integrations."""
     if not engine.models:
@@ -57,7 +56,7 @@ def _triage_view(db: Database, bug: dict) -> dict:
 
 
 @router.get("/{bug_id}")
-def get_triage(bug_id: str, db: Database = Depends(get_db), _: dict = Depends(current_user)) -> dict:
+def get_triage(bug_id: str, db: Database = Depends(get_db)) -> dict:
     return _triage_view(db, bug_service.get_bug_or_404(db, bug_id))
 
 
@@ -66,7 +65,7 @@ def decide(
     bug_id: str,
     payload: TriageDecision,
     db: Database = Depends(get_db),
-    user: dict = Depends(require_roles("Admin")),
+    user: dict = Depends(current_user),
 ) -> dict:
-    """An administrator approves or edits the AI recommendation."""
+    """Approve or edit the AI recommendation."""
     return _triage_view(db, service.decide(db, bug_id, payload, user))

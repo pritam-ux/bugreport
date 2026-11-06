@@ -5,7 +5,6 @@ import { api, useApi } from '../api/client.js'
 import {
   Button, COMPONENTS, Card, EmptyState, Meter, Notice, PRIORITIES, PageHeader, SEVERITIES, Select, Spinner, percent, formatDate,
 } from '../components/ui.jsx'
-import { useAuth } from '../context/AuthContext.jsx'
 
 const LOW_CONFIDENCE = 0.5
 const BREAKDOWN_LABELS = {
@@ -152,12 +151,10 @@ function DecisionForm({ triage, developers, onSaved }) {
 }
 
 function TriageDetail({ bugId }) {
-  const { user } = useAuth()
   const { data, error, loading, reload, setData } = useApi(`/triage/${bugId}`)
   const { data: developers } = useApi('/developers')
   if (loading && !data) return <Spinner label="Loading predictions" />
   if (error && !data) return <Notice tone="error" onRetry={reload}>{error}</Notice>
-  const isAdmin = user.role === 'Admin'
   const done = data.triage_status === 'approved' || data.triage_status === 'modified'
   const changed = data.triage_decision?.changed_fields || []
   return (
@@ -187,12 +184,12 @@ function TriageDetail({ bugId }) {
           <Prediction label="Severity" prediction={data.predictions.severity} />
         </div>
       </Card>
-      {isAdmin && developers ? (
+      {developers ? (
         <Card title={done ? 'Change this triage' : 'Approve or edit'}>
           <DecisionForm key={data.bug_id} triage={data} developers={developers} onSaved={setData} />
         </Card>
       ) : (
-        <Card title="Suggested developers" description="Administrators approve or change these suggestions.">
+        <Card title="Suggested developers">
           <RecommendedDevelopers recommendations={data.predictions.recommended_developers || []} />
         </Card>
       )}

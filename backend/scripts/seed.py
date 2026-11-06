@@ -9,7 +9,6 @@ are flagged so live analytics never count them as human decisions.
 from __future__ import annotations
 
 import argparse
-import os
 import random
 import sys
 from datetime import datetime, timedelta, timezone
@@ -18,7 +17,6 @@ from pathlib import Path
 from app.config import get_settings
 from app.database import ATTACHMENTS, BUGS, COUNTERS, DEVELOPERS, MATCHES, USERS, ensure_indexes, get_database
 from app.schemas import PRIORITY_RANK
-from app.security import hash_password
 from app.services import duplicates as duplicate_service
 from app.services import triage as triage_service
 from app.services.developers import sync_developer_stats
@@ -26,7 +24,6 @@ from nlp.dataset import load_dataset
 from nlp.pipeline import MODEL_FILE, Candidate, NlpEngine
 
 DATASET = Path(__file__).resolve().parents[1] / "data" / "seed_bugs.psv"
-DEMO_PASSWORD = "BugSense2026!"
 HISTORY_DAYS = 175
 # Duplicate reports this recent stay unreviewed, so the review pages have real work to show.
 UNREVIEWED_DUPLICATE_GROUPS = {"G30", "G31", "G33", "G34"}
@@ -40,12 +37,6 @@ DEVELOPERS_SEED = [
     ("Liam Chen", "liam.chen@bugsense.dev", ["css", "accessibility", "responsive layout", "design systems"], ["UI", "Frontend"], 0.7),
     ("Fatima Noor", "fatima.noor@bugsense.dev", ["kubernetes", "docker", "terraform", "nginx", "ci pipelines"], ["Infrastructure"], 1.1),
     ("Ethan Brooks", "ethan.brooks@bugsense.dev", ["monitoring", "aws", "tls certificates", "deployment", "postgres"], ["Infrastructure", "Database"], 1.5),
-]
-
-USERS_SEED = [
-    ("Morgan Lee", "admin@bugsense.dev", "Admin"),
-    ("Sofia Alvarez", "developer@bugsense.dev", "Developer"),
-    ("Jordan Blake", "reporter@bugsense.dev", "Reporter"),
 ]
 
 # Typical days to fix, by priority, before each developer's pace is applied.
@@ -63,7 +54,7 @@ def choose_status(age_days: float, rng: random.Random) -> str:
 def seed(reset: bool) -> None:
     settings = get_settings()
     if settings.environment == "production":
-        sys.exit("Refusing to load sample data with demo passwords when ENVIRONMENT=production.")
+        sys.exit("Refusing to load sample data when ENVIRONMENT=production. Run this from your computer instead.")
     db = get_database()
     if db[BUGS].estimated_document_count() and not reset:
         sys.exit(f"Database '{settings.mongodb_db}' already has data. Run again with --reset to replace it.")
@@ -81,16 +72,7 @@ def seed(reset: bool) -> None:
     print(f"NLP status: {engine.status}")
 
     db[COUNTERS].insert_many([
-        {"_id": "USR", "value": 1000 + len(USERS_SEED)},
         {"_id": "DEV", "value": 100 + len(DEVELOPERS_SEED)},
-    ])
-    # Use your own password on any site other people can reach: the default is public.
-    seed_password = os.environ.get("SEED_PASSWORD") or DEMO_PASSWORD
-    password_hash = hash_password(seed_password)
-    db[USERS].insert_many([
-        {"user_id": f"USR-{1001 + i}", "name": name, "email": email, "role": role,
-         "password_hash": password_hash, "token_version": 0, "created_at": now - timedelta(days=HISTORY_DAYS)}
-        for i, (name, email, role) in enumerate(USERS_SEED)
     ])
     db[DEVELOPERS].insert_many([
         {"developer_id": f"DEV-{101 + i}", "name": name, "email": email, "skills": skills,
@@ -120,7 +102,6 @@ def seed(reset: bool) -> None:
     )
 
     first_in_group: dict[str, str] = {}
-    candidates: list[Candidate] = []
     bugs = []
     for index, record in enumerate(records):
         bug_id = f"BUG-{1001 + index}"
@@ -235,10 +216,8 @@ def seed(reset: bool) -> None:
     db[COUNTERS].update_one({"_id": "BUG"}, {"$set": {"value": 1000 + total}}, upsert=True)
     sync_developer_stats(db)
 
-    print(f"Loaded {total} reports, {len(DEVELOPERS_SEED)} developers, {len(USERS_SEED)} users. "
+    print(f"Loaded {total} reports, {len(DEVELOPERS_SEED)} developers. "
           f"{profiles_ready} reports await triage.")
-    shown = "the SEED_PASSWORD you set" if seed_password != DEMO_PASSWORD else DEMO_PASSWORD
-    print(f"Sign in with admin@bugsense.dev, developer@bugsense.dev or reporter@bugsense.dev. Password: {shown}")
 
 
 def _keep_listed_report_first(records: list[dict], listed: list[dict]) -> None:
